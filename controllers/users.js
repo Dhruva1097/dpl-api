@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken')
-const { Bank_details, Pan_aadhar_details, Transactions, Users, Transaction_type, Referral, Contests, Upcoming_breakup, Join_contest, Fixtures, CaptainViceCaptain, Wallet_transaction, Match_contest } = require('../models')
+const { Bank_details, Pan_aadhar_details, Transactions, Users, Transaction_type, Referral, Contests, Upcoming_breakup, Join_contest, Fixtures, CaptainViceCaptain, Wallet_transaction, Match_contest, Notifications } = require('../models')
 const { pagination, fetch_user } = require('../helpers')
 const referral = require('../models/referral')
 const s3 = require('../config/awsconfig')
 const { Op } = require('sequelize')
 const Sequelize = require('sequelize')
+const { notification } = require('.')
 
 const getReferralCode = async (req, res) => {
     try {
@@ -336,7 +337,10 @@ const user_profile = async (req, res) => {
         for (let i = 0; i < unique_contest.length; i++) {
             unique_array.push(joined_contest.find(e => e.contest_id === unique_contest[i]))
         }
-
+        const count = await Notifications.count({
+            where: { user_id: token.id, status: 1 }
+          });  // :contentReference[oaicite:0]{index=0}
+        
         const level_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Referral Income' } })
         const group_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Group Level Income' } })
 
@@ -381,7 +385,8 @@ const user_profile = async (req, res) => {
                 referral_bonus: "",
                 account_verified: (user.bank_detail?.is_verified === 2 && user.pan_aadhar_detail?.is_verified === 2) ? 1 : 0,
                 bank_verify: user.bank_detail?.is_verified ? user.bank_detail?.is_verified : 0,
-                pan_verify: user.pan_aadhar_detail?.is_verified ? user.pan_aadhar_detail?.is_verified : 0
+                pan_verify: user.pan_aadhar_detail?.is_verified ? user.pan_aadhar_detail?.is_verified : 0,
+                isNotifications: false //count > 0,
             })
         })
 

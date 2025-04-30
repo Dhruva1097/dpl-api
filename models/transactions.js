@@ -32,6 +32,9 @@ module.exports = (sequelize, DataTypes) => {
         gateway_name: {
             type: DataTypes.STRING
         },
+        tnx_note: {
+            type: DataTypes.STRING
+        },
         checksum: {
             type: DataTypes.INTEGER
         },

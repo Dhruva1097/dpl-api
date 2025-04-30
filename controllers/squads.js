@@ -81,11 +81,13 @@ const getSquads = async (req, res) => {
         if (lineUpSquad.length) {
             await unique_squad.map(async data => {
                 const lineupEntry = lineUpSquad.find(l => l.player_id === data.p_id);
-                console.log("entry",lineupEntry)
+                // console.log("entry",lineupEntry)
                 if (lineupEntry && typeof lineupEntry.is_playing === 'boolean') {
                     data.is_playing = lineupEntry.is_playing ? 1 : 0;
+                    data.announced = data.is_playing == 1 ? true : false
                 } else {
                     data.is_playing = lineupEntry.is_playing;
+                    data.announced = data.is_playing == 1 || data.is_playing == 2 ? true : false
                 }
                 // if (await playingList.includes(data.p_id)) {
                 // } else{data.is_playing = lineupEntry.is_playing}

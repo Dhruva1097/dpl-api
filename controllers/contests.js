@@ -529,6 +529,7 @@ const join_contest = async (req, res) => {
             await Transactions.create({
                 user_id: user.id,
                 trans_type_id: 3,
+                tnx_note: `Joined A Contest`,
                 txn_date: Date(),
                 txn_amount: team_id.length * entryFee,
                 txn_id: merchantTransactionId,

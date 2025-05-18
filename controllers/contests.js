@@ -525,7 +525,7 @@ const join_contest = async (req, res) => {
                     returning: true
                 })
             }
-            const merchantTransactionId = 'DPL' + Date.now()
+            const merchantTransactionId = match_id + '000' + Date.now()
             await Transactions.create({
                 user_id: user.id,
                 trans_type_id: 3,

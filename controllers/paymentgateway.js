@@ -9,10 +9,11 @@ const { base64decode } = require('nodejs-base64');
 const newPayment = async (req, res) => {
     try {
         const { price } = await req.body
+        console.log('Request body price:', price);
         const token = await req.headers.authorization.split(" ")[1]
         const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY)
         const { id } = await Users.findOne({ where: { 'mobile_number': mobile_number }, raw: true })
-
+        console.log('User ID:', id);
         const merchantTransactionId = 'DPL' + Date.now();
         const merchantId = process.env.MERCHANT_ID
         const merchantUserId = 'MUID' + id
@@ -22,13 +23,14 @@ const newPayment = async (req, res) => {
             merchantId: merchantId,
             merchantTransactionId: merchantTransactionId,
             amount: amount * 100,
-            redirectUrl: "https://dpl11.com/cmspages/phonepe-success",
+            redirectUrl: "https://start25pro.com/cmspages/phonepe-success",
             callbackUrl: "https://dpl11.fantasycricketdevelopment.com/payment/paymentstatus",
             redirectMode: 'POST',
             paymentInstrument: {
                 type: 'PAY_PAGE'
             }
         }
+        console.log('Payload data object:', data);
 
         const payload = Buffer.from(JSON.stringify(data), 'utf-8')
         const payloadMain = payload.toString('base64')
@@ -51,7 +53,7 @@ const newPayment = async (req, res) => {
                 request: payloadMain
             }
         }
-
+        console.log('Axios request options:', options);
         await axios.request(options).then(async response => {
             const current_time = Date.now()
             await Transactions.create({
@@ -65,10 +67,11 @@ const newPayment = async (req, res) => {
             console.log(merchantTransactionId)
             res.status(200).json({ status: true, message: "Payment Initiated", data: { txnId: merchantTransactionId, url: response.data.data.instrumentResponse.redirectInfo.url } })
         }).catch((error) => {
+            console.log('Error in payment initiation:', error.message);
             res.status(200).json({ status: true, message: 'Payment Initiation Failed', data: error })
         })
-    }
-    catch (error) {
+    } catch (error) {
+        console.log('Error in newPayment function:', error.message);
         res.status(404).json({ status: false, message: error.message })
     }
 }

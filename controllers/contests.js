@@ -978,16 +978,12 @@ const Joined_contest_match = async (req, res) => {
             ],
             include: [{
                 model: Fixtures,
-                where: {
-                    status: match_status
-                }
+                where: { status: match_status }
             }]
         })
 
         const modify_fixtures_list = total_contest.map(e => e.fixture)
-
         const unique = [... new Set(modify_fixtures_list.map(x => x.id))]
-
         const totalPages = Math.ceil(unique.length / limit)
 
         const fetch_match = await Join_contest.findAll({
@@ -1000,10 +996,12 @@ const Joined_contest_match = async (req, res) => {
             limit: paginate.limit,
             include: [{
                 model: Fixtures,
-                where: {
-                    status: match_status
-                }
+                where: { status: match_status },
+                order: [['match_date', 'DESC']]
             }],
+            order: [
+                [{ model: Fixtures, as: 'fixture' }, 'match_date', 'DESC']
+            ],
         })
 
         const teams_contest = await Join_contest.findAll({
@@ -1049,7 +1047,7 @@ const Joined_contest_match = async (req, res) => {
 
 
         const sorted_data = {
-            data: modify_data.sort((a, b) => a.match_date - b.match_date).reverse(),
+            data: modify_data.sort((a, b) => a.match_date - b.match_date),
             totalPages,
             currentPage: page
         }

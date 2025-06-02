@@ -107,6 +107,7 @@ const verifyOtp = async (req, res) => {
                     referred_by: referredId?.id,
                     invite_code: referral.generate(10, { upperCaseAlphabets: true, lowerCaseAlphabets: false, specialChars: false }),
                     cash_balance: 0,
+                    current_level: 0,
                     winning_amount: 0,
                     bonus_amount: 0
                 })

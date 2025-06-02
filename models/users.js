@@ -79,6 +79,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.DECIMAL(10, 2),
             defaultValue: 0
         },
+        current_level: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0
+        },
         level_income: {
             type: DataTypes.DECIMAL(10, 2),
             defaultValue: 0

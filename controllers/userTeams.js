@@ -211,17 +211,27 @@ const getUserTeam = async (req, res) => {
         const fetch_team_name = []
         for (ids in playeridlist) {
             const data = await Squads.findAll({ attributes: { exclude: ['c_id', 'series_id', 'createdAt', 'updatedAt'] }, where: { 'series_id': series_id, 'player_id': { [Op.in]: playeridlist[ids] } }, raw: true })
-            var no_of_bat = data.filter(e => e.player_type === 'bat').length
-            var no_of_bowl = data.filter(e => e.player_type === 'bowl').length
-            var no_of_wk = data.filter(e => e.player_type === 'wk').length
-            var no_of_ar = data.filter(e => e.player_type === 'ar').length
+            
+            const uniquePlayersMap = new Map();
+            data.forEach(player => {
+                const key = player.series_id + '_' + player.player_id;
+                if (!uniquePlayersMap.has(key)) {
+                    uniquePlayersMap.set(key, player);
+                }
+            });
+            const uniquePlayers = Array.from(uniquePlayersMap.values());
+            
+            var no_of_bat = uniquePlayers.filter(e => e.player_type === 'bat').length
+            var no_of_bowl = uniquePlayers.filter(e => e.player_type === 'bowl').length
+            var no_of_wk = uniquePlayers.filter(e => e.player_type === 'wk').length
+            var no_of_ar = uniquePlayers.filter(e => e.player_type === 'ar').length
             var captain = data.filter(e => e.player_id === captainIdList[ids])[0].player_short_name
             var vice_captain = data.filter(e => e.player_id === viceCapIdList[ids])[0].player_short_name
-            var fetch_unique = [... new Set(data.map(x => x.team_name))]
+            var fetch_unique = [... new Set(uniquePlayers.map(x => x.team_name))]
             if (!fetch_team_name.length) {
                 fetch_team_name.push(...fetch_unique)
             }
-            // console.log(data, ids);
+            // console.log(data, fetch_unique,"a");
             var team_a_count = data.filter(e => e.team_name === fetch_unique[0]).length
             var team_b_count = data.filter(e => e.team_name === fetch_unique[1]).length
             var cap_team = data.filter(e => e.player_id === captainIdList[ids])[0].team_id === team_players.team_a_id

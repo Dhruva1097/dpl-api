@@ -885,7 +885,6 @@ const joined_contest_detail = async (req, res) => {
 
 const leader_board = async (req, res) => {
     try {
-
         const { page } = req.query
         const { match_id, contest_id } = await req.body
         const token = await fetch_user(req.headers.authorization.split(" ")[1])
@@ -895,6 +894,13 @@ const leader_board = async (req, res) => {
         if (!match_id || !contest_id) {
             return res.status(400).json({ status: false, message: "Missing Fields" })
         }
+        const match = await Fixtures.findOne({
+            where: { id: match_id },
+            attributes: ["status"]
+        });
+        const order = match.status === "upcoming"
+            ? [["user_id", "ASC"], ["player_team_id", "ASC"]]
+            : [["current_rank", "ASC"]];
 
         const contest_detail = await Join_contest.findAll({
             where: { fixture_id: match_id, contest_id: contest_id },
@@ -915,10 +921,7 @@ const leader_board = async (req, res) => {
                     attributes: ["user_team"]
                 }]
             }],
-            order: [
-                [sequelize.literal(`(join_contest.user_id = ${token.id})`), 'DESC'],
-                ['current_rank', 'ASC'],
-            ],
+            order: order
         });
 
         const count = await Join_contest.count({ where: { fixture_id: match_id, contest_id: contest_id } })
@@ -933,27 +936,35 @@ const leader_board = async (req, res) => {
             ]
         })
 
-        const result = []
+        const result = contest_detail.map(e => {
+            const isYours = e.user_id === token.id;
+            const inWinningZone =
+                e.fixture.status !== "upcoming" &&
+                contest.upcoming_breakups[contest.upcoming_breakups.length - 1].end > e.current_rank;
 
-        for (let e of contest_detail) {
-            let data = {}
-            data.user_id = e.user_id
-            data.team_name = e.userteam_cap_vice.user.user_team,
-                data.team_count = e.userteam_cap_vice.userteams[0].team_count
-            data.team_id = e.player_team_id
-            data.point = e.player_points
-            data.previous_rank = e.previous_rank
-            data.rank = e.current_rank
-            data.is_yours = (e.user_id == token.id) ? 1 : 0
-            data.winning_amount = (e.fixture.status == 'completed') ? e.winning_amount : 0.0,
-                data.in_winning_zone = (e.fixture.status == 'upcoming') ? false : contest.upcoming_breakups[contest.upcoming_breakups.length - 1].end > e.current_rank,
-                result.push(data)
-        }
+            return {
+                user_id: e.user_id,
+                team_name: e.userteam_cap_vice.user.user_team,
+                team_count: e.userteam_cap_vice.userteams[0]?.team_count || 0,
+                team_id: e.player_team_id,
+                point: e.player_points,
+                previous_rank: e.previous_rank,
+                rank: e.current_rank,
+                is_yours: isYours ? 1 : 0,
+                winning_amount: e.fixture.status === "completed" ? e.winning_amount : 0.0,
+                in_winning_zone: inWinningZone
+            };
+        });
+
 
         const total_pages = Math.ceil(count / limit)
         const current_page = await page || 1
 
-        await res.status(200).json({ status: true, message: "Data Found", data: { data: result/* contest_detail?.rows */, total_pages, current_page } })
+        await res.status(200).json({ 
+            status: true, 
+            message: "Data Found", 
+            data: { data: result, total_pages, current_page } 
+        })
     }
     catch (error) {
         console.log(error)

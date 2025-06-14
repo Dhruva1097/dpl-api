@@ -30,8 +30,6 @@ const getFullScoreData = async (req, res) => {
         // const score = await fetch(`http://13.56.135.148:8080/api/v1/scorecard/${match.m_id}`).then(response => response.json())
         // console.log(rawData.innings)
         const rawData = JSON.parse(score_card);
-        const teamaID = rawData.teama.team_id
-        const teambID = rawData.teamb.team_id
         const responseData = {
             fixtureAPIId: rawData.match_id,
             fixtureType: rawData.format_str,
@@ -69,7 +67,7 @@ const getFullScoreData = async (req, res) => {
                     : null,
             },
             innings: Array.isArray(rawData.innings) && rawData.innings.length > 0
-                ? rawData.innings.map((inn) => ({
+                ? rawData.innings.map((inn, index) => ({
                     innings_number: inn.number,
                     extras: inn.extra_runs
                         ? {
@@ -100,7 +98,7 @@ const getFullScoreData = async (req, res) => {
                         : [],
                     bat: inn.batsmen
                         ? {
-                            teamAPIId: inn.batsmen[0]?.team_id == teamaID ? teamaID : teambID,
+                            teamAPIId: inn?.batting_team_id,
                             team: Array.isArray(inn.batsmen)
                                 ? inn.batsmen.map((player) => ({
                                     playerName: player.name,
@@ -120,7 +118,7 @@ const getFullScoreData = async (req, res) => {
                         : null,
                     bowl: inn.bowlers
                         ? {
-                            teamAPIId: inn.bowlers[0]?.team_id == teamaID ? teamaID : teambID,
+                            teamAPIId: rawData?.teama?.team_id === inn?.batting_team_id ? rawData?.teamb?.team_id : rawData?.teama?.team_id,
                             team: Array.isArray(inn.bowlers)
                                 ? inn.bowlers.map((bowler) => ({
                                     playerName: bowler.name,

@@ -3,6 +3,7 @@ const { Users, CaptainViceCaptain, UserTeam, Squads, Lineup, Performance, PointS
 const { fetch_user } = require('../helpers')
 const { Op } = require('sequelize')
 const e = require('express')
+const { log } = require('node:console')
 
 const creatUserTeam = async (req, res) => {
     try {
@@ -188,6 +189,7 @@ const getUserTeam = async (req, res) => {
         const token = await req.headers.authorization.split(" ")[1]
         const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY)
         const { id } = await Users.findOne({ where: { 'mobile_number': mobile_number }, raw: true })
+        // console.log("getUserTeam", match_id, series_id, contest_id);
         const fetch_contest = await Join_contest.findAll({
             where: {
                 user_id: id,
@@ -232,8 +234,8 @@ const getUserTeam = async (req, res) => {
                 fetch_team_name.push(...fetch_unique)
             }
             // console.log(data, fetch_unique,"a");
-            var team_a_count = data.filter(e => e.team_name === fetch_unique[0]).length
-            var team_b_count = data.filter(e => e.team_name === fetch_unique[1]).length
+            var team_a_count = data.filter(e => e.team_name === fetch_unique[1]).length
+            var team_b_count = data.filter(e => e.team_name === fetch_unique[0]).length
             var cap_team = data.filter(e => e.player_id === captainIdList[ids])[0].team_id === team_players.team_a_id
             var vc_team = data.filter(e => e.player_id === viceCapIdList[ids])[0].team_id === team_players.team_a_id
             // console.log(captainIdList[ids])
@@ -272,6 +274,8 @@ const getUserTeam = async (req, res) => {
         })
 
         teamplayers.forEach(e => {
+            e.team_a_count = e.teamplayers.filter(e => e.team_name === team[0]?.team_name).length
+            e.team_b_count = e.teamplayers.filter(e => e.team_name === team[1]?.team_name).length
             e.team_a_name = team[0]?.team_short_name,
                 e.team_b_name = team[1]?.team_short_name
         })
@@ -1041,4 +1045,3 @@ module.exports = {
     getPlayerStats,
     series_player_details
 }
-

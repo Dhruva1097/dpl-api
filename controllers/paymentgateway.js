@@ -123,14 +123,14 @@ const checkPaymentStatus = async (req, res) => {
             method: 'GET',
             url: `${BASE_URL}/custom-api/v1/order/${merchantTransactionId}`,
             headers: {
-                accept: 'application/json', 
+                accept: 'application/json',
                 'Content-Type': 'application/json',
             }
         }
 
         await axios.request(options).then(async (response) => {
             console.log('Response from payment status check:', response.data);
-            const {status, id, total} = await response.data
+            const { status, id, total } = await response.data
             // const transactions = await Transactions.findOne({ where: { "txn_id": id }, raw: true })
             if (status == "processing") {
                 return res.status(200).send({ success: true, message: `${total} credited` });
@@ -211,51 +211,65 @@ const checkPaymentStatusCron = async () => {
 
 const withdrawRequest = async (req, res) => {
     try {
-        const token = await req.headers.authorization.split(" ")[1]
-        const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY)
-        const users = await Users.findOne({ where: { 'mobile_number': mobile_number }, raw: true })
-        const { type, winning_amount, cash_back, level_income } = await req.body
-        const settings = await Setting.findOne({ raw: true })
-        const { min_withdraw_amount, max_withdraw_amount } = await settings
+        const token = req.headers.authorization?.split(" ")[1];
+        const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY);
 
-        const withdraw_amount = await winning_amount ? winning_amount : cash_back ? cash_back : level_income ? level_income : 0
-        const user_amount = await winning_amount ? users.winning_amount : cash_back ? users.cashback : level_income ? users.level_income : 0
-        // console.log(user_amount)
-        // console.log(withdraw_amount)
+        const users = await Users.findOne({ where: { mobile_number }, raw: true });
+        const { type, winning_amount, cash_back, level_income } = req.body;
+        const { min_withdraw_amount, max_withdraw_amount } = await Setting.findOne({ raw: true });
 
-        if (withdraw_amount >= min_withdraw_amount && withdraw_amount <= max_withdraw_amount && user_amount >= withdraw_amount) {
-            const current_time = Date.now()
+        console.log('Withdraw Request:', req.body);
+
+        const withdrawMapping = {
+            CASH_BACK: { amount: cash_back, userField: 'level_income' },
+            LEVEL_INCOME: { amount: level_income, userField: 'cashback' },
+            WINNING_AMOUNT: { amount: winning_amount, userField: 'winning_amount' },
+        };
+
+        const { amount: userWithdraw, userField } = withdrawMapping[type] || {};
+        const withdraw_amount = users?.[userField];
+
+        if (!userWithdraw || !withdraw_amount) {
+            return res.status(200).json({ status: true, message: 'Invalid request', data: {} });
+        }
+
+        if (userWithdraw >= min_withdraw_amount && userWithdraw <= max_withdraw_amount && withdraw_amount >= userWithdraw) {
+            const current_time = Date.now();
+            const tx_id = `W${current_time}`;
+
+            await Users.update(
+                { [userField]: withdraw_amount - userWithdraw },
+                { where: { id: users.id } }
+            );
+
             await Withdraw_Request.create({
                 user_id: users.id,
                 amount: 0,
-                refund_amount: withdraw_amount,
+                refund_amount: userWithdraw,
                 request_status: 0,
-                type: type,
-                tx_id: `DPL${Date.now()}`
-            })
+                type,
+                tx_id,
+            });
+
             await Transactions.create({
                 user_id: users.id,
                 trans_type_id: 9,
-                tx_id: `DPL${Date.now()}`,
+                tx_id,
                 txn_date: current_time,
-                txn_amount: withdraw_amount,
-                status: 0
-            })
-            await Users.update({
-                winning_amount: (users.winning_amount - withdraw_amount)
-            }, { where: { id: users.id } })
-            return res.status(200).json({ status: true, message: 'Requested Successfully', data: {} })
-        }
-        else {
-            return res.status(200).json({ status: true, message: 'Request Failed! Insufficient Amount', data: {} })
-        }
+                txn_amount: userWithdraw,
+                status: 0,
+            });
 
+            return res.status(200).json({ status: true, message: 'Requested Successfully', data: {} });
+        } else {
+            return res.status(200).json({ status: true, message: 'Request Failed! Insufficient Amount', data: {} });
+        }
+    } catch (error) {
+        console.error(error.message);
+        res.status(404).json({ status: false, message: error.message });
     }
-    catch (error) {
-        console.log(error.message)
-        res.status(404).json({ status: false, message: error.message })
-    }
-}
+};
+
 
 module.exports = {
     newPayment,

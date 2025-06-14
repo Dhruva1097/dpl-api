@@ -534,16 +534,19 @@ const mlm_wallet = async (req, res) => {
             }]
         })
 
-        const level_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Referral Income' } })
-        const group_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Group Level Income' } })
+        // const level_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Referral Income' } })
+        // const group_income = await Wallet_transaction.sum('credit_amount', { where: { 'user_id': token.id, 'transaction_type': 'Group Level Income' } })
+
+        const group_income = user[0].cashback;
+        const level_income = user[0].level_income;
 
         const modify_data = {
             joined_contest: [...new Set(user[0].join_contests.map(e => e.contest_id))].length,
             joined_teams: [...new Set(user[0].join_contests.map(e => e.player_team_id))].length,
-            cashback: Number(group_income) ? Number(group_income) : 0,
+            cashback: Number(level_income) ? Number(level_income) : 0,
             winnings: Number(user[0].winning_amount),
             cash_deposit: Number(user[0].cash_balance),
-            level_income: Number(level_income) ? Number(level_income) : 0,
+            level_income: Number(group_income) ? Number(group_income) : 0 ,
             withdrawabale_amount:  Number(user[0].winning_amount),
             non_withdrawabale_amount: Number(user[0].cash_balance) + Number(user[0].bonus_amount) + Number(group_income) + Number(level_income),
             bonus: Number(user[0].bonus_amount),

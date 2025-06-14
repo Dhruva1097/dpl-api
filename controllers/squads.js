@@ -11,7 +11,7 @@ const getSquads = async (req, res) => {
             attributes: ["c_id", "team_a_id", "team_b_id"],
             raw: true
         })
-        // console.log(fixtures)
+        // console.log(fixtures.length,"test")
         var squads = await Squads.findAll({
             where: { 'c_id': fixtures.c_id, 'team_id': { [Op.in]: [fixtures.team_a_id, fixtures.team_b_id] } },
             attributes: { exclude: ["updatedAt", "createdAt"] },
@@ -79,26 +79,41 @@ const getSquads = async (req, res) => {
         });
 
         if (lineUpSquad.length) {
-            await unique_squad.map(async data => {
-                const lineupEntry = lineUpSquad.find(l => l.player_id === data.p_id);
-                // console.log("entry",lineupEntry)
-                if (lineupEntry && typeof lineupEntry.is_playing === 'boolean') {
-                    data.is_playing = lineupEntry.is_playing ? 1 : 0;
-                    data.announced = data.is_playing == 1 ? true : false
+            console.log(unique_squad.length)
+            for (const dataItem of unique_squad) {
+                const entry = lineUpSquad.find(l => l.player_id === dataItem.p_id);
+                const isPlaying = entry?.is_playing;
+                // if(!entry){
+                //     console.log(lineUpSquad)
+                // }
+                if (isPlaying == 0) {
+                    dataItem.is_playing = 0;
+                    dataItem.announced = false;
+                } else if (isPlaying == 1) {
+                    dataItem.is_playing = 1;
+                    dataItem.announced = true;
+                } else if (isPlaying == 2) {
+                    dataItem.is_playing = 2;
+                    dataItem.announced = false;
                 } else {
-                    data.is_playing = lineupEntry.is_playing;
-                    data.announced = data.is_playing == 1 || data.is_playing == 2 ? true : false
+                    dataItem.is_playing = 1;
+                    dataItem.announced = true;
                 }
-                // if (await playingList.includes(data.p_id)) {
-                // } else{data.is_playing = lineupEntry.is_playing}
-            })
-            await unique_squad.forEach(element => {
-                element.player_image = ""
-            });
-            // console.log(unique_squad)
-            await res.status(200).json({ status: true, message: 'Data Found', data: { lineup: 1, data: unique_squad } })
-        } else {
-            await res.status(200).json({ status: true, message: 'Data Found', data: { lineup: 0, data: unique_squad } })
+                // const code = entry?.is_playing ?? 0;  // default to 0 if missing
+                // // Set is_playing for API (substitute and announced both become 1)
+                // dataItem.is_playing = (code === 1 || code === 2) ? 1 : 0;
+                // // announced only when originally announced code = 1
+                // dataItem.announced = (code === 1);
+                // console.log(dataItem)
+                dataItem.player_image = "";
+            }
+
+            return res
+                .status(200)
+                .json({ status: true, message: 'Data Found', data: { lineup: 1, data: unique_squad } });
+        }
+        else {
+            return res.status(200).json({ status: true, message: 'Data Found', data: { lineup: 0, data: unique_squad } })
         }
     }
     catch (error) {
@@ -141,9 +156,9 @@ const getSquadf = async (req, res) => {
              where: { 'team_id': { [Op.in]: [fixtures.team_a_id, fixtures.team_b_id] } }
          }) */
 
-       /*  const lineUpSquad = await Lineup.findAll({
-            where: { 'm_id': match_id, 'team_id': { [Op.in]: [fixtures.team_a_id, fixtures.team_b_id] } }
-        }) */
+        /*  const lineUpSquad = await Lineup.findAll({
+             where: { 'm_id': match_id, 'team_id': { [Op.in]: [fixtures.team_a_id, fixtures.team_b_id] } }
+         }) */
 
         // const playingList = lineUpSquad.filter(player => player).map(id => id.player_id)
         const playingList = squads.map(e => e.lineups.filter(player => player).map(id => id.player_id)).flat()
@@ -190,7 +205,7 @@ const getSquadf = async (req, res) => {
             series_fixtures[e] = filter_seri_data.find(e)
         }*/
 
-        return res.status(200).json({ d: squads }) 
+        return res.status(200).json({ d: squads })
 
 
 

@@ -1,8 +1,8 @@
-const express = require('express')
-const {squads} = require('../controllers')
+const express = require("express");
+const squads = require("../controllers/squads");
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/squadlist', squads.getSquads)
+router.post("/squadlist", squads.getSquads);
 
-module.exports = router
+module.exports = router;

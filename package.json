@@ -1,19 +1,21 @@
 {
-  "name": "DPL11_API",
+  "name": "dpl11-api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc --watch & nodemon index"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.1520.0",
+    "apicache": "^1.6.3",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.6.2",
     "body-parser": "^1.20.2",
+    "compression": "^1.8.1",
     "cron": "^3.1.6",
     "cron-time-generator": "^2.0.1",
     "crypto": "^1.0.1",
@@ -32,12 +34,9 @@
     "nodejs-base64": "^2.0.0",
     "nodemon": "^3.0.1",
     "otp-generator": "^4.0.1",
-    "request": "^2.88.2",
     "sequelize": "^6.33.0",
     "sequelize-cli": "^6.6.1",
     "sha256": "^0.2.0",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "twilio": "^4.19.0"
   }
 }

@@ -83,6 +83,11 @@ const getSquads = async (req, res) => {
             for (const dataItem of unique_squad) {
                 const entry = lineUpSquad.find(l => l.player_id === dataItem.p_id);
                 const isPlaying = entry?.is_playing;
+                // lineUpSquad.map(l => {console.log(l.player_id, dataItem.p_id) })
+                console.log(dataItem)
+                // if(entry.player_name == "Priyanaz Chatterji"){
+                //     console.log(entry)
+                // }
                 // if(!entry){
                 //     console.log(lineUpSquad)
                 // }
@@ -96,8 +101,8 @@ const getSquads = async (req, res) => {
                     dataItem.is_playing = 2;
                     dataItem.announced = false;
                 } else {
-                    dataItem.is_playing = 1;
-                    dataItem.announced = true;
+                    dataItem.is_playing = 0;
+                    dataItem.announced = false;
                 }
                 // const code = entry?.is_playing ?? 0;  // default to 0 if missing
                 // // Set is_playing for API (substitute and announced both become 1)

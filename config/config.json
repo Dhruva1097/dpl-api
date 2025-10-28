@@ -3,7 +3,7 @@
     "username": "remoteuser",
     "password": "Somjit_12345",
     "database": "u480732795_start25",
-    "host": "69.62.73.202",
+    "host": "13.60.245.44",
     "dialect": "mysql",
     "timezone": "+05:30",
     "logging": false

@@ -184,115 +184,81 @@ const creatUserTeam = async (req, res) => {
 }
 
 const getUserTeam = async (req, res) => {
-    try {
-        const { match_id, series_id, contest_id } = await req.body
-        const token = await req.headers.authorization.split(" ")[1]
-        const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY)
-        const { id } = await Users.findOne({ where: { 'mobile_number': mobile_number }, raw: true })
-        // console.log("getUserTeam", match_id, series_id, contest_id);
-        const fetch_contest = await Join_contest.findAll({
-            where: {
-                user_id: id,
-                fixture_id: match_id,
-                contest_id: contest_id
-            }
-        })
-        const team_players = await Fixtures.findOne({
-            where: {
-                id: match_id
-            }
-        })
-        const userteam = await CaptainViceCaptain.findAll({ attributes: { exclude: ['sports_id', 'user_id', 'createdAt', 'updatedAt'] }, include: [UserTeam], where: { 'match_id': match_id, 'user_id': id } })
-        const teamData = await JSON.parse(JSON.stringify(userteam)).filter(data => data.userteams)
-        const playerData = await teamData.map(data => data.userteams)
-        const playeridlist = await playerData.map(data => data.map(data => data.player_id))
-        const captainIdList = await teamData.map(data => data.captain_id)
-        const viceCapIdList = await teamData.map(data => data.viceCaptain_id)
-        const playerTeamIdList = await teamData.map(data => data.id)
-        var teamplayers = []
-        const fetch_team_name = []
-        for (ids in playeridlist) {
-            const data = await Squads.findAll({ attributes: { exclude: ['c_id', 'series_id', 'createdAt', 'updatedAt'] }, where: { 'series_id': series_id, 'player_id': { [Op.in]: playeridlist[ids] } }, raw: true })
-            
-            const uniquePlayersMap = new Map();
-            data.forEach(player => {
-                const key = player.series_id + '_' + player.player_id;
-                if (!uniquePlayersMap.has(key)) {
-                    uniquePlayersMap.set(key, player);
-                }
-            });
-            const uniquePlayers = Array.from(uniquePlayersMap.values());
-            
-            var no_of_bat = uniquePlayers.filter(e => e.player_type === 'bat').length
-            var no_of_bowl = uniquePlayers.filter(e => e.player_type === 'bowl').length
-            var no_of_wk = uniquePlayers.filter(e => e.player_type === 'wk').length
-            var no_of_ar = uniquePlayers.filter(e => e.player_type === 'ar').length
-            var captain = data.filter(e => e.player_id === captainIdList[ids])[0].player_short_name
-            var vice_captain = data.filter(e => e.player_id === viceCapIdList[ids])[0].player_short_name
-            var fetch_unique = [... new Set(uniquePlayers.map(x => x.team_name))]
-            if (!fetch_team_name.length) {
-                fetch_team_name.push(...fetch_unique)
-            }
-            // console.log(data, fetch_unique,"a");
-            var team_a_count = data.filter(e => e.team_name === fetch_unique[1]).length
-            var team_b_count = data.filter(e => e.team_name === fetch_unique[0]).length
-            var cap_team = data.filter(e => e.player_id === captainIdList[ids])[0].team_id === team_players.team_a_id
-            var vc_team = data.filter(e => e.player_id === viceCapIdList[ids])[0].team_id === team_players.team_a_id
-            // console.log(captainIdList[ids])
-            // console.log(data.filter(e => console.log('res', e.player_id)))
-            // console.log(data)
-            // console.log(data.filter(e => e.player_id === captainIdList[ids]))
-            // console.log(data.filter(e => e.player_id === captainIdList[ids])[0].player_short_name)
-            var team_name = teamData[ids].userteams[0].team_count
-            var team_id = playerTeamIdList[ids]
-            var team_a_name = ''
-            var team_b_name = ''
-            var is_joined = contest_id === "" ? false : fetch_contest.find(con => con.player_team_id === playerTeamIdList[ids]) ? true : false
-            teamplayers.push({
-                captain, team_a_count,
-                team_name,
-                cap_team,
-                team_a_name,
-                team_b_name,
-                vc_team,
-                is_joined,
-                team_b_count,
-                vice_captain,
-                team_id,
-                no_of_bat,
-                no_of_bowl,
-                no_of_wk,
-                no_of_ar,
-                teamplayers: data
-            })
-        }
+  try {
+    const { match_id, series_id, contest_id } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+    const { mobile_number } = jwt.verify(token, process.env.NODE_SECRET_KEY);
+    const { id } = await Users.findOne({ where: { 'mobile_number': mobile_number }, raw: true })
+    // Parallel fetch: user, user teams, contest entries, fixture
+    const [user, rawTeams, contestEntries, fixture] = await Promise.all([
+      Users.findOne({ where: { mobile_number }, raw: true }),
+      CaptainViceCaptain.findAll({
+        where: { match_id, user_id: null }, // placeholder, will set user_id below
+        include: [{ model: UserTeam, as: 'userteams', attributes: ['player_id', 'team_count', 'id'] }]
+      }),
+      Join_contest.findAll({
+        where: { user_id: id, fixture_id: match_id, contest_id },
+        attributes: ['player_team_id'],
+        raw: true
+      }),
+      Fixtures.findByPk(match_id, { raw: true })
+    ]);
+    if (!user) throw new Error('User not found');
+    const userId = user.id;
 
-        const team = await Teams.findAll({
-            where: {
-                team_name: fetch_team_name
-            }
-        })
+    // Re-run rawTeams and contestEntries with correct user_id filter
+    rawTeams.splice(0, rawTeams.length, ...(await CaptainViceCaptain.findAll({
+      where: { match_id, user_id: userId },
+      include: [{ model: UserTeam, as: 'userteams', attributes: ['player_id', 'team_count', 'id'] }]
+    })).map(ut => ut.get({ plain: true })));
+    const joinedTeamIds = new Set(contestEntries.map(c => c.player_team_id));
 
-        teamplayers.forEach(e => {
-            e.team_a_count = e.teamplayers.filter(e => e.team_name === team[0]?.team_name).length
-            e.team_b_count = e.teamplayers.filter(e => e.team_name === team[1]?.team_name).length
-            e.team_a_name = team[0]?.team_short_name,
-                e.team_b_name = team[1]?.team_short_name
-        })
+    const { team_a_id, team_b_id } = fixture;
+    // Gather all player IDs
+    const allPlayerIds = rawTeams.flatMap(ut => ut.userteams.map(u => u.player_id));
+    const [squads, teamsInfo] = await Promise.all([
+      Squads.findAll({ where: { series_id, player_id: { [Op.in]: allPlayerIds } }, raw: true }),
+      Teams.findAll({ where: { team_id: [team_a_id, team_b_id] }, raw: true })
+    ]);
+    const teamAInfo = teamsInfo.find(t => t.team_id === team_a_id);
+    const teamBInfo = teamsInfo.find(t => t.team_id === team_b_id);
 
-        await res.status(200).json({
-            status: true,
-            message: "Data Found",
-            data: {
-                data: teamplayers
-            }
-        })
-    }
-    catch (error) {
-        console.log(error.message)
-        res.status(400).json({ status: false, message: error.message })
-    }
-}
+    // console.log(fixture, teamsInfo, team_a_id, team_b_id);
+    const teamplayers = rawTeams.map(ut => {
+      const selIds = ut.userteams.map(u => u.player_id);
+      const players = squads.filter(s => selIds.includes(s.player_id));
+      const uniquePlayers = [...new Map(players.map(p => [p.player_id, p])).values()];
+      return {
+        captain: uniquePlayers.find(p => p.player_id === ut.captain_id)?.player_short_name || null,
+        vice_captain: uniquePlayers.find(p => p.player_id === ut.viceCaptain_id)?.player_short_name || null,
+        team_a_count: uniquePlayers.filter(p => p.team_id === team_a_id).length,
+        team_b_count: uniquePlayers.filter(p => p.team_id === team_b_id).length,
+        team_a_name: teamAInfo?.team_short_name,
+        team_b_name: teamBInfo?.team_short_name,
+        cap_team: uniquePlayers.some(p => p.player_id === ut.captain_id && p.team_id === team_a_id),
+        vc_team: uniquePlayers.some(p => p.player_id === ut.viceCaptain_id && p.team_id === team_a_id),
+        team_name: ut.userteams[0]?.team_count || null,
+        team_id: ut.id,
+        no_of_bat: uniquePlayers.filter(p => p.player_type === 'bat').length,
+        no_of_bowl: uniquePlayers.filter(p => p.player_type === 'bowl').length,
+        no_of_wk: uniquePlayers.filter(p => p.player_type === 'wk').length,
+        no_of_ar: uniquePlayers.filter(p => p.player_type === 'ar').length,
+        is_joined: joinedTeamIds.has(ut.id),
+        teamplayers: uniquePlayers
+      };
+    });
+
+    return res.status(200).json({ status: true, message: 'Data Found', data: { data: teamplayers } });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({ status: false, message: error.message });
+  }
+};
+
+
+
+
+
 
 const getUserTeambyId = async (req, res) => {
     try {

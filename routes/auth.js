@@ -1,5 +1,5 @@
 const express = require('express');
-const { auth } = require('../controllers');
+const auth = require('../controllers/auth');
 const { update_team_points, getzquadSportsData, getLiveScore } = require('../services/sportsData');
 
 const router = express.Router();

@@ -1,10 +1,8 @@
-const express = require('express')
-const {fixtures} = require('../controllers')
+const express = require("express");
+const fixtures = require("../controllers/fixtures");
+const router = express.Router();
 
-const router = express.Router()
+router.get("/fixtures", fixtures.getFixtures);
+router.post("/activatefixtures", fixtures.activateFixtures);
 
-router.get('/fixtures', fixtures.getFixtures)
-
-router.post('/activatefixtures', fixtures.activateFixtures)
-
-module.exports = router
+module.exports = router;
